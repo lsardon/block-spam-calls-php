@@ -6,7 +6,7 @@ services:
     container_name: twilio-spam-filter
     working_dir: /app
     ports:
-      - "3000:8080"
+      - "3010:8080"  # Changed from 3000 to 3010
     volumes:
       - ./:/app
     environment:
@@ -23,3 +23,9 @@ services:
       composer serve --host=0.0.0.0
       "
     restart: unless-stopped
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
