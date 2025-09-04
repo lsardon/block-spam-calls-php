@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  twilio-spam-filter:
+    image: php:8.2-cli
+    container_name: twilio-spam-filter
+    working_dir: /app
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./:/app
+    environment:
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-+12145500953}
+    command: >
+      bash -c "
+      apt-get update && apt-get install -y git unzip libzip-dev &&
+      docker-php-ext-install zip &&
+      curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+      composer install --no-dev --optimize-autoloader &&
+      if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || touch .env; fi &&
+      composer serve --host=0.0.0.0
+      "
+    restart: unless-stopped
