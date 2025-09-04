@@ -1,27 +1,28 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     git unzip libzip-dev \
     && docker-php-ext-install zip \
-    && a2enmod rewrite
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+WORKDIR /app
+
+# Copy application files
 COPY . .
 
+# Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
-    echo '<VirtualHost *:80>\n\
-    DocumentRoot /var/www/html\n\
-    <Directory /var/www/html>\n\
-        AllowOverride All\n\
-        Require all granted\n\
-    </Directory>\n\
-</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
+# Copy .env.example to .env if needed
+RUN if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || echo "" > .env; fi
 
-RUN chown -R www-data:www-data /var/www/html
+# The app runs on port 8080
+EXPOSE 8080
 
-EXPOSE 80
-CMD ["apache2-foreground"]
+# Run the application using composer serve
+CMD ["composer", "serve", "--host=0.0.0.0"]
