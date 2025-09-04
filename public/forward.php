@@ -10,11 +10,12 @@ $from = $_POST['From'] ?? '';
 $to = $_POST['To'] ?? '';
 $callSid = $_POST['CallSid'] ?? '';
 
-// Get the forward number from environment variable
-$forwardNumber = $_ENV['TWILIO_PHONE_NUMBER'] ?? $_SERVER['TWILIO_PHONE_NUMBER'] ?? '+12145500953';
+// Hardcode the forward number and Growably URL
+$forwardNumber = '+12145500953'; // Your phone number
+$growablyUrl = 'https://services.leadconnectorhq.com/phone-system/voice-call/inbound';
 
 // Log the call
-error_log("Call from $from to $to (forwarding to: $forwardNumber)");
+error_log("Call from $from to $to (SID: $callSid)");
 
 // Get Add-ons data if available
 $addOns = json_decode($_POST['AddOns'] ?? '{}', true);
@@ -44,18 +45,11 @@ if ($spamScore >= 2) {
     $response->say('This call has been blocked.');
     $response->hangup();
 } else {
-    // Try redirect to Growably first
-    $growablyUrl = $_ENV['GROWABLY_WEBHOOK_URL'] ?? $_SERVER['GROWABLY_WEBHOOK_URL'] ?? null;
-    
-    if ($growablyUrl) {
-        error_log("Redirecting to Growably: $growablyUrl");
-        $response->redirect($growablyUrl, ['method' => 'POST']);
-    } else {
-        // Fallback to dialing the number
-        error_log("Dialing number: $forwardNumber");
-        $response->say('Connecting your call.', ['voice' => 'alice']);
-        $response->dial($forwardNumber);
-    }
+    // Just dial the number directly
+    error_log("Forwarding to $forwardNumber");
+    $response->dial($forwardNumber, [
+        'callerId' => $to
+    ]);
 }
 
 // Return TwiML
