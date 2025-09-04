@@ -2,25 +2,32 @@ version: '3.8'
 
 services:
   twilio-spam-filter:
-    image: php:8.2-cli
+    image: php:8.2-apache
     container_name: twilio-spam-filter
-    working_dir: /app
     ports:
-      - "3010:8080"  # Changed from 3000 to 3010
-    volumes:
-      - ./:/app
+      - "3010:80"
     environment:
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-+12145500953}
+    volumes:
+      - ./:/var/www/html
     command: >
       bash -c "
       apt-get update && apt-get install -y git unzip libzip-dev &&
       docker-php-ext-install zip &&
       curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+      cd /var/www/html &&
       composer install --no-dev --optimize-autoloader &&
-      if [ ! -f .env ]; then cp .env.example .env 2>/dev/null || touch .env; fi &&
-      composer serve --host=0.0.0.0
+      a2enmod rewrite &&
+      echo '<VirtualHost *:80>
+        DocumentRoot /var/www/html/public
+        <Directory /var/www/html/public>
+          AllowOverride All
+          Require all granted
+        </Directory>
+      </VirtualHost>' > /etc/apache2/sites-available/000-default.conf &&
+      apache2-foreground
       "
     restart: unless-stopped
     networks:
