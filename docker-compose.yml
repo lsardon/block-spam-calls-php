@@ -1,38 +1,23 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
   twilio-spam-filter:
     image: php:8.2-apache
     container_name: twilio-spam-filter
     ports:
-      - "3010:80"
-    environment:
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
-      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-+12145500953}
+      - "${PORT:-3010}:80"
     volumes:
       - ./:/var/www/html
+    environment:
+      # Forwarding destination (Growably webhook URL)
+      FORWARDING_URL: ${FORWARDING_URL:-https://services.leadconnectorhq.com/phone-system/voice-call/inbound}
+      # Number of spam services that must flag to block (default: 2)
+      BLOCK_THRESHOLD: ${BLOCK_THRESHOLD:-2}
+      # Apache config
+      APACHE_DOCUMENT_ROOT: /var/www/html/public
     command: >
       bash -c "
-      apt-get update && apt-get install -y git unzip libzip-dev &&
-      docker-php-ext-install zip &&
-      curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
-      cd /var/www/html &&
-      composer install --no-dev --optimize-autoloader &&
+      composer install --no-interaction --optimize-autoloader &&
       a2enmod rewrite &&
-      echo '<VirtualHost *:80>
-        DocumentRoot /var/www/html/public
-        <Directory /var/www/html/public>
-          AllowOverride All
-          Require all granted
-        </Directory>
-      </VirtualHost>' > /etc/apache2/sites-available/000-default.conf &&
       apache2-foreground
       "
-    restart: unless-stopped
-    networks:
-      - dokploy-network
-
-networks:
-  dokploy-network:
-    external: true
